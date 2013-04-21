@@ -1,0 +1,253 @@
+%{
+	import java.io.*;
+	import java.util.*;
+%}
+
+
+
+%%
+
+start
+	:	{emit("\""+name+".mexe\" = main in\n!{{"); }
+		program
+		{emit("}}*BASIS;"); }
+	;
+
+program
+	:	program function
+	|	function
+	;
+
+function
+	:	NAME '('
+		{
+			varCount = 0;
+			varTable = new HashMap<String,Integer>();
+		}
+		names ')'
+		{
+			emit("#\"" + $1 + "[f" + varCount + "]\");
+			emit("[");
+		}
+		'{'
+			declarations
+			expressions
+		'}'
+		{
+			emit("(Return)");
+			emit("];");
+		}
+	;
+
+names
+	:	non_empty_names
+	|
+	;
+
+non_empty_names
+	:	NAME {addVar($1);} ',' non_empty_names
+	|	NAME {addVar($1);}
+	;
+
+declarations
+	:	VAR non_empty_names ; declarations;
+	|
+	;
+
+expressions
+	:	expression ';' expressions
+	|
+	;
+
+expression
+	:	NOT expression {
+			emit("(Not)");
+		}
+	|	expression BINOP1 {
+			beginBinOp();
+		}
+		expression {
+			endBinOp($2);
+		}
+	|	expression BINOP2 {
+			beginBinOp();
+		}
+		expression {
+			endBinOp($2);
+		}
+	|	expression BINOP3 {
+			beginBinOp();
+		}
+		expression {
+			endBinOp($2);
+		}
+	|	expression BINOP4 {
+			beginBinOp();
+		}
+		expression {
+			endBinOp($2);
+		}
+	|	expression BINOP5 {
+			beginBinOp();
+		}
+		expression {
+			endBinOp($2);
+		}
+	|	expression BINOP6 {
+			beginBinOp();
+		}
+		expression {
+			endBinOp($2);
+		}
+	|	expression BINOP7 {
+			beginBinOp();
+		}
+		expression {
+			endBinOp($2);
+		}
+	|	expression AND {
+			int n = beginANDOR();
+			emit("(GoFalse _" + n + ")");
+		}
+		expression {
+			endANDOR();
+		}
+	|	expression OR {
+			int n = beginANDOR();
+			emit("(GoTrue _" + n + ")");
+		}
+		expression {
+			endANDOR();
+		}
+%%
+
+	static private String name;
+	private ohpromLexer lexer;
+	private int varCount;
+	private HashMap<String,Integer> varTable;
+	private int tmpPos = -1;
+	private int nextLabel = 1;
+	private int argCount = 0;
+	private int argPos = 0;
+	private int elseLab = 0;
+	private int endifLab = 0;
+	
+	static class Link
+	{
+		int val;
+		Link next;
+		public Link( int n, Link l )
+		{
+			val = n;
+			next = l;
+		}
+	}
+	Link stack = null;
+
+	private int pushTemp()
+	{
+		return tmpPos--;
+	}
+
+	private void popTemp()
+	{
+		tmpPos++;
+	}
+
+	private int newLabel()
+	{
+		return nextLabel++;
+	}
+
+	private void push( int n )
+	{
+		stack = new Link(n,stack);
+	}
+
+	private int pop()
+	{
+		int res = stack.val;
+		stack = stack.next;
+		return res;
+	}
+
+	private void addVar( String name )
+	{
+		if( varTable.get(name) != null )
+			yyerror("Variable already exists");
+		varTable.put(name,varCount++);
+	}
+
+	private int findVar( String name )
+	{
+		Integer res = varTable.get(name);
+		if( res == null )
+			yyerror("Variable does not exist");
+		return res;
+	}
+
+	private int yylex()
+	{
+		int yyl_return = -1;
+		try
+		{
+			yylval = null;
+			yyl_return = lexer.yylex();
+			if( yylval==null )
+				yylval = new ohpromParserVal(ohpromParser.yyname[yyl_return]);
+			//System.out.println("Token: "+ohpromParser.yyname[yyl_return]+" Lexeme: "+yylval.sval);
+		}
+		catch (IOException e)
+		{
+			System.err.println("IO error: "+e);
+		}
+		return yyl_return;
+	}
+
+	public void yyerror( String error )
+	{
+		System.err.println("Error:  "+error);
+		System.err.println("Line:   "+lexer.getLine());
+		System.err.println("Column: "+lexer.getColumn());
+		System.exit(1);
+	}
+
+	public ohpromParser( Reader r )
+	{
+		lexer = new ohpromLexer(r,this);
+	}
+
+	public static void main( String args[] )
+	  	throws IOException
+	{
+		ohpromParser yyparser = new ohpromParser(new FileReader(args[0]));
+		name = args[0].substring(0,args[0].lastIndexOf('.'));
+		yyparser.yyparse();
+	}
+
+	public void emit( String s )
+	{
+		System.out.println(s);
+	}
+
+	public void beginBinOp()
+	{
+		emit("(StoreArgAcc " + tmpPos-- +" 0)");
+	}
+
+	public void endBinOp(String name)
+	{
+		emit("(StoreArgAcc " + ++tmpPos +" 1)");
+		emit("(Call #\"" + name + "[f2]\" " + tmpPos + " )")
+	}
+
+	public int beginANDOR()
+	{
+		int lab = newLabel();
+		return lab;
+	}
+	public void endANDOR()
+	{
+		int lab = pop();
+		emit("_" + lab + ":");
+	}

@@ -1,0 +1,13 @@
+main() {
+	rav limit,i,j,k;
+	limit=9;
+	i=7;
+	j=2;
+	k=i+j;
+	fi(k<=limit) {
+		writeln(i ++"+" ++j ++" is lower or equal to " ++limit);
+	}
+	esle {
+		writeln(i ++"+" ++j ++" is higher than " ++limit);
+	};
+}
