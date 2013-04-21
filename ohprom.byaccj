@@ -8,9 +8,9 @@
 %%
 
 start
-	:	{emit("\""+name+".mexe\" = main in\n!{{"); }
+	:	{progBegin();}
 		program
-		{emit("}}*BASIS;"); }
+		{progEnd();}
 	;
 
 program
@@ -230,6 +230,16 @@ expression
 		System.out.println(s);
 	}
 
+	public void progBegin()
+	{
+		emit("\""+name+".mexe\" = main in\n!{{");
+	}
+
+	public void progEnd()
+	{
+		emit("}}*BASIS;"); 
+	}
+
 	public void beginBinOp()
 	{
 		emit("(StoreArgAcc " + tmpPos-- +" 0)");
@@ -246,6 +256,7 @@ expression
 		int lab = newLabel();
 		return lab;
 	}
+
 	public void endANDOR()
 	{
 		int lab = pop();
