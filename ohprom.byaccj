@@ -8,9 +8,9 @@
 %%
 
 start
-	:	{progBegin();}
+	:	{progHead();}
 		program
-		{progEnd();}
+		{progTail();}
 	;
 
 program
@@ -119,6 +119,39 @@ expression
 		expression {
 			endANDOR();
 		}
+	|	smallexpression
+	|	NAME '=' expression {emit("(Store " + findVar($1) + ")");}
+	|	RETURN expression {
+			emit("(Return)");
+		}
+	;
+
+smallexpression
+	:	op smallexpression {
+			emit("(StoreArgAcc " + tmpPos + " 0)");
+			emit("(Call #\"" + $1 + "[f1]\" " + tmpPos + ")");
+		}
+	|	IF expression {
+			push(elselab);
+			push(endifLab);
+			elseLab = newLabel();
+			endifLab = newLabel();
+			emit("(GoFalse _" + elselab + ")");
+		}
+		body {
+			emit("(Go _" + endifLab + ")" );
+		}
+		ifrest {
+			emit("_" + endifLab +":");
+			endifLab = pop();
+			elseLab = pop();
+		}
+	|	LITERAL {
+			emit("(MakeVal " + $1 + ")");
+		}
+	|	NAME {
+			emit("(Fetch " + findvar($1) + ")");
+		}
 %%
 
 	static private String name;
@@ -132,133 +165,110 @@ expression
 	private int elseLab = 0;
 	private int endifLab = 0;
 	
-	static class Link
-	{
+	static class Link {
 		int val;
 		Link next;
-		public Link( int n, Link l )
-		{
+		public Link(int n, Link l) {
 			val = n;
 			next = l;
 		}
 	}
 	Link stack = null;
 
-	private int pushTemp()
-	{
+	private int pushTemp() {
 		return tmpPos--;
 	}
 
-	private void popTemp()
-	{
+	private void popTemp() {
 		tmpPos++;
 	}
 
-	private int newLabel()
-	{
+	private int newLabel() {
 		return nextLabel++;
 	}
 
-	private void push( int n )
-	{
+	private void push(int n) {
 		stack = new Link(n,stack);
 	}
 
-	private int pop()
-	{
+	private int pop() {
 		int res = stack.val;
 		stack = stack.next;
 		return res;
 	}
 
-	private void addVar( String name )
-	{
+	private void addVar(String name) {
 		if( varTable.get(name) != null )
 			yyerror("Variable already exists");
 		varTable.put(name,varCount++);
 	}
 
-	private int findVar( String name )
-	{
+	private int findVar(String name) {
 		Integer res = varTable.get(name);
 		if( res == null )
 			yyerror("Variable does not exist");
 		return res;
 	}
 
-	private int yylex()
-	{
+	private int yylex() {
 		int yyl_return = -1;
-		try
-		{
+		try {
 			yylval = null;
 			yyl_return = lexer.yylex();
 			if( yylval==null )
 				yylval = new ohpromParserVal(ohpromParser.yyname[yyl_return]);
 			//System.out.println("Token: "+ohpromParser.yyname[yyl_return]+" Lexeme: "+yylval.sval);
 		}
-		catch (IOException e)
-		{
+		catch (IOException e) {
 			System.err.println("IO error: "+e);
 		}
 		return yyl_return;
 	}
 
-	public void yyerror( String error )
-	{
+	public void yyerror(String error) {
 		System.err.println("Error:  "+error);
 		System.err.println("Line:   "+lexer.getLine());
 		System.err.println("Column: "+lexer.getColumn());
 		System.exit(1);
 	}
 
-	public ohpromParser( Reader r )
-	{
+	public ohpromParser(Reader r) {
 		lexer = new ohpromLexer(r,this);
 	}
 
-	public static void main( String args[] )
-	  	throws IOException
-	{
+	public static void main(String args[]) throws IOException {
 		ohpromParser yyparser = new ohpromParser(new FileReader(args[0]));
 		name = args[0].substring(0,args[0].lastIndexOf('.'));
 		yyparser.yyparse();
 	}
 
-	public void emit( String s )
-	{
+	public void emit(String s) {
 		System.out.println(s);
 	}
 
-	public void progBegin()
-	{
+	public void progHead() {
 		emit("\""+name+".mexe\" = main in\n!{{");
 	}
 
-	public void progEnd()
-	{
+	public void progTail() {
 		emit("}}*BASIS;"); 
 	}
 
-	public void beginBinOp()
-	{
+	public void beginBinOp() {
 		emit("(StoreArgAcc " + tmpPos-- +" 0)");
 	}
 
-	public void endBinOp(String name)
-	{
+	public void endBinOp(String name) {
 		emit("(StoreArgAcc " + ++tmpPos +" 1)");
 		emit("(Call #\"" + name + "[f2]\" " + tmpPos + " )")
 	}
 
-	public int beginANDOR()
-	{
+	public int beginANDOR() {
 		int lab = newLabel();
 		return lab;
 	}
 
-	public void endANDOR()
-	{
+	public void endANDOR() {
 		int lab = pop();
 		emit("_" + lab + ":");
 	}
