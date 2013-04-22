@@ -26,7 +26,7 @@ public ohpromLexer (java.io.Reader r, ohpromParser yyparser) {
 }
 
 public int getLine() {
-	return yyline;
+	return yyline+1;
 }
 
 public int getColumn() {
@@ -44,30 +44,32 @@ _STRING=	\"([^\"\\]|\\b|\\t|\\n|\\f|\\r|\\\"|\\\'|\\\\|(\\[0-3][0-7][0-7])|\\[0-
 _CHAR=		\'([^\'\\]|\\b|\\t|\\n|\\f|\\r|\\\"|\\\'|\\\\|(\\[0-3][0-7][0-7])|(\\[0-7][0-7])|(\\[0-7]))\'
 _DELIMS=	[(){}\[\],;.$#\!=]
 _ALPHA=		[:letter:]
-_NAME=		(_|{ALPHA})(_|{ALPHA}|{DIGIT})*
+_NAME=		(_|{_ALPHA})(_|{_ALPHA}|{_DIGIT})*
 _LITERAL=	{_FLOAT}|{_INT}|{_STRING}|{_CHAR}|"true"|"false"|"null"
 
+NEWLINE=	\r|\n|\r\n
+WHITESPACE=	[\n\r\ \t\b\012]
 %%
 
 {_LITERAL} {
 	yyparser.yylval = new ohpromParserVal(yytext());
-	return ohpromParser.LITERAL
+	return ohpromParser.LITERAL;
 }
 
-"RO" {
-	return ohpromParser.RO;
+"ro" {
+	return ohpromParser.OR;
 }
 
-"DNA" {
-	return ohpromParser.DNA;
+"dna" {
+	return ohpromParser.AND;
 }
 
-"TON" {
+"ton" {
 	return ohpromParser.NOT;
 }
 
-{_DELIM} {
-	yyohpromParser.yylval = new ohpromParserVal(yytext());
+{_DELIMS} {
+	yyparser.yylval = new ohpromParserVal(yytext());
 	return yycharat(0);
 }
 
@@ -100,14 +102,11 @@ _LITERAL=	{_FLOAT}|{_INT}|{_STRING}|{_CHAR}|"true"|"false"|"null"
 "fi" {
 	return ohpromParser.IF;
 }
-"esel" {
+"esle" {
 	return ohpromParser.ELSE;
 }
 "file" {
 	return ohpromParser.ELIF;
-}
-"elihw" {
-	return ohpromParser.WHILE;
 }
 "rav" {
 	return ohpromParser.VAR;
@@ -142,7 +141,7 @@ _LITERAL=	{_FLOAT}|{_INT}|{_STRING}|{_CHAR}|"true"|"false"|"null"
 	/* ignore */
 }
 
-[\t\r\n\f] {
+[ \t\r\n\f] {
 }
 
 . {

@@ -3,7 +3,21 @@
 	import java.util.*;
 %}
 
-
+%left RETURN '='
+%left NOT
+%right AND
+%right OR
+%left OP1
+%right OP2
+%left OP3
+%left OP4
+%left OP5
+%left OP6
+%left OP7
+%token <sval> LITERAL,BINOP7,BINOP6,BINOP5,BINOP4,BINOP3,BINOP2,BINOP1,NAME
+%token IF,ELSE,ELIF,VAR
+%token RETURN,AND,OR,NOT
+%type <sval> op
 
 %%
 
@@ -26,7 +40,7 @@ function
 		}
 		names ')'
 		{
-			emit("#\"" + $1 + "[f" + varCount + "]\");
+			emit("#\"" + $1 + "[f" + varCount + "]\" = ");
 			emit("[");
 		}
 		'{'
@@ -50,7 +64,7 @@ non_empty_names
 	;
 
 declarations
-	:	VAR non_empty_names ; declarations;
+	:	VAR non_empty_names ';' declarations
 	|
 	;
 
@@ -120,7 +134,9 @@ expression
 			endANDOR();
 		}
 	|	smallexpression
-	|	NAME '=' expression {emit("(Store " + findVar($1) + ")");}
+	|	NAME '=' expression {
+			emit("(Store " + findVar($1) + ")");
+		}
 	|	RETURN expression {
 			emit("(Return)");
 		}
@@ -132,11 +148,11 @@ smallexpression
 			emit("(Call #\"" + $1 + "[f1]\" " + tmpPos + ")");
 		}
 	|	IF expression {
-			push(elselab);
+			push(elseLab);
 			push(endifLab);
 			elseLab = newLabel();
 			endifLab = newLabel();
-			emit("(GoFalse _" + elselab + ")");
+			emit("(GoFalse _" + elseLab + ")");
 		}
 		body {
 			emit("(Go _" + endifLab + ")" );
@@ -150,8 +166,67 @@ smallexpression
 			emit("(MakeVal " + $1 + ")");
 		}
 	|	NAME {
-			emit("(Fetch " + findvar($1) + ")");
+			emit("(Fetch " + findVar($1) + ")");
 		}
+	|	NAME '(' {
+			beginArgList();
+		}
+		arguments ')' {
+			endArgList($1,argCount);
+		}
+	|	'(' expression ')'
+	;
+
+op
+	:	OP1
+	|	OP2
+	|	OP3
+	|	OP4
+	|	OP5
+	|	OP6
+	|	OP7
+	;
+
+body
+	:	'{' expressions '}'
+	;
+
+ifrest
+	:	ELIF {
+		emit("_" + elseLab + ":");
+		}
+		expression {
+			elseLab = newLabel();
+			emit("(GoFalse _" + elseLab + ")");
+		}
+		body {
+			emit("(Go _" + endifLab + ")");
+		}
+		ifrest
+	|	ELSE {
+			emit("_" + elseLab + ":");
+		}
+		body
+	|	{emit("_" + elseLab + ":");}
+	;
+
+arguments
+	:	non_empty_arguments
+	|
+	;
+
+non_empty_arguments
+	:	argument ',' non_empty_arguments
+	|	argument
+	;
+
+argument
+	:	expression {
+			emit("(StoreArgAcc " + (tmpPos+1) + " " + argCount + ")");
+			argCount++;
+		}
+	;
+
 %%
 
 	static private String name;
@@ -260,7 +335,7 @@ smallexpression
 
 	public void endBinOp(String name) {
 		emit("(StoreArgAcc " + ++tmpPos +" 1)");
-		emit("(Call #\"" + name + "[f2]\" " + tmpPos + " )")
+		emit("(Call #\"" + name + "[f2]\" " + tmpPos + " )");
 	}
 
 	public int beginANDOR() {
@@ -271,4 +346,16 @@ smallexpression
 	public void endANDOR() {
 		int lab = pop();
 		emit("_" + lab + ":");
+	}
+
+	public void beginArgList() {
+		push(argCount);
+		argCount=0;
+		tmpPos--;
+	}
+
+	public void endArgList(String name,int count) {
+		tmpPos++;
+		emit("(Call #\"" + name + "[f" + count + "]\" " + tmpPos + ")");
+		argCount = pop();
 	}

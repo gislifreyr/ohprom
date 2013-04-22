@@ -2,10 +2,13 @@ main() {
 	rav limit,i,j,k;
 	limit=9;
 	i=7;
-	j=2;
+	j=1;
 	k=i+j;
-	fi(k<=limit) {
-		writeln(i ++"+" ++j ++" is lower or equal to " ++limit);
+	fi(k==limit) {
+		writeln(i ++"+" ++j ++" is equal to " ++limit);
+	}
+	file(k<limit) {
+		writeln(i ++"+" ++j ++" is lower than " ++limit);
 	}
 	esle {
 		writeln(i ++"+" ++j ++" is higher than " ++limit);

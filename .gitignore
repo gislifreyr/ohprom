@@ -1,1 +1,5 @@
 *.jar
+*.java
+*.class
+*.masm
+*.mexe
