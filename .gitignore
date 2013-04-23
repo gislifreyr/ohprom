@@ -2,3 +2,8 @@
 *.class
 *.masm
 *.mexe
+*.aux
+*.log
+*.out
+*.toc
+*.bak

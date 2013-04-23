@@ -1,0 +1,289 @@
+%%
+%%  Beinagrind fyrir Morpho handbók í LaTeX.
+%%  Til að keyra þetta gegnum LaTeX forritið
+%%  má t.d. nota pdflatex í cygwin með eftir-
+%%  farandi skipun í bash:
+%%
+%%       pdflatex handbok
+%%   eða (virkar líka í cmd):
+%%       bash -c 'pdflatex handbok'
+%%
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[icelandic]{babel}
+\usepackage[pdftex]{hyperref}
+%\usepackage{makeidx,smplindx,fancyhdr,graphicx,times,multicol,comment}
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\usepackage[rounded]{syntax}
+\usepackage[pdftex]{graphicx}
+\newenvironment{repnull}[0]{%
+	\begin{stack}
+	\\
+	\begin{rep}
+}{%
+	\end{rep}
+	\end{stack}
+}
+\newenvironment{malrit}[1]{%
+	\par\noindent\begin{minipage}{\linewidth}\vspace{0.5em}\begin{quote}\noindent%
+	\hspace*{-2em}\synt{#1}:\hfill\par%
+	\noindent%
+	\begin{minipage}{\linewidth}\begin{syntdiag}%
+}{%
+	\end{syntdiag}\end{minipage}\end{quote}\end{minipage}%
+}
+
+\begin{document}
+\sloppy
+\title{Handbók fyrir ohprom}
+\author{Gísli Freyr Brynjarsson}
+\maketitle
+\begin{center}
+\end{center}
+\pagebreak
+
+\begin{abstract}
+ohprom er mjög einfölduð og öfugsnúin útgáfa af forritunarmálinu Morpho.
+\end{abstract}
+
+\tableofcontents
+
+\section{Inngangur}
+ohprom er forritunarmál sem þróað var í áfanganum Þýðendur í Háskóla Íslands á vorönn 2013.
+Það byggir á málinu Morpho (http://morpho.cs.hi.is) eftir Snorra Agnarsson.
+
+ohprom er mjög frumstætt og takmarkað þegar að útfærslumöguleikum kemur, en tenging þess við Morpho
+eykur notagildi þess til muna.
+\section{Notkun og uppsetning}
+Grunnkóða þýðandans má nálgast á GitHub síðu minni (https://github.com/gislifreyr/ohprom/archive/master.zip). Í zip-skránni er að finna grunnkóða þýðandans ásamt Makefile og JFlex.jar útgáfu.
+
+ohprom notar Flex lesgreini og Byaccj þáttara og er þýðandinn skrifaður í Java. Til þess að hægt sé að þýða hann í Linux/Mac eða Cygwin skel þá þurfa Java, Morpho og Byaccj að vera aðgengileg í {\tt PATH} breytu í skelinni. 
+
+Upplýsingar um uppsetningu á Java má nálgast á síðu Oracle (http://docs.oracle.com/javase/7/docs/webnotes/install/index.html).
+
+Upplýsingar um uppsetningu á Morpho má nálgast á síðu Morpho (http://morpho.cs.hi.is/download.html).
+
+Upplýsingar um uppsetningu byaccj má finna á SourceForge síðu byaccj (http://sourceforge.net/projects/byaccj/?source=navbar).
+
+
+Til að þýða ohprom er svo keyrð {\tt make} skipunin og ef vilji er til að keyra einnig prufuforrit skrifað í ohprom þá skal keyra {\tt make test}.
+\pagebreak
+
+\section{Málfræði}
+\subsection{Frumeiningar málsins}
+\subsubsection{Athugasemdir}
+Athugasemdir eru með sama sniði og í Morpho. Til að hefja athugasemd sem nær til enda þeirrar línu þá er slegið inn ';;;'. Einnig má skilgreina athugasemd innan '\{;;;' og ';;;\}' og virkar svoleiðis afmörkun á athugasemdir sem ná yfir margar línur.
+\subsubsection{Lykilorð}
+Lykilorð ohprom eru: fi, esle, file, nruter, rav, true, false, null.
+\subsection{Mállýsing}
+\subsubsection{Grunneiningar}
+\synt{string}, \synt{char}, \synt{int}, \synt{float} og \synt{opname} eru eins og í Morpho.
+
+%% name
+\begin{malrit}{name}
+	\begin{rep}[b]
+		'a-zA-Z'
+		\\'a-zA-Z0-9_'
+	\end{rep}
+\end{malrit}
+
+%% literal
+\begin{malrit}{literal}
+	\begin{stack}
+		<float>
+		\\<string>
+		\\<char>
+		\\<int>
+		\\{\tt null}
+		\\{\tt true}
+		\\{\tt false}
+	\end{stack}
+\end{malrit}
+
+%% op
+\begin{malrit}{op}
+	\begin{stack}
+		{<BINOP7>}
+		\\{<BINOP6>}
+		\\{<BINOP5>}
+		\\{<BINOP4>}
+		\\{<BINOP3>}
+		\\{<BINOP2>}
+		\\{<BINOP1>}
+	\end{stack}
+\end{malrit}
+
+\subsubsection{Forrit}
+%% program
+\begin{malrit}{program}
+	\begin{stack}[b]
+		<program> <function>
+		\\<function>
+	\end{stack}
+\end{malrit}
+
+%% function
+\begin{malrit}{function}
+	<name> {\tt (}
+	\begin{stack}
+		\\
+		\begin{rep}
+			<names>
+			\\{\tt ,}
+		\end{rep}
+	\end{stack}
+	{\tt )\{} <declarations><expressions> \}
+\end{malrit}
+
+%% body
+\begin{malrit}{names}
+	\begin{stack}[b]
+		<non_empty_names>
+		\\
+	\end{stack}
+\end{malrit}
+
+%% non_empty_names
+\begin{malrit}{non_empty_names}
+	\begin{stack}[b]
+		<name> {\tt ','} <non_empty_names>
+		\\ <name>
+	\end{stack}
+\end{malrit}
+
+%% declarations
+\begin{malrit}{declarations}
+	\begin{stack}[b]
+		<var> <non_empty_names> {\tt ;} <declarations>
+		\\
+	\end{stack}
+\end{malrit}
+
+%% expressions
+\begin{malrit}{expressions}
+	\begin{stack}[b]
+		<expression> {\tt ;} <expressions>
+		\\
+		\end{stack}
+\end{malrit}
+
+%% expression
+\begin{malrit}{expression}
+	\begin{stack}
+		{\tt not} <expression>
+		\\<expression> <BINOP1> <expression>
+		\\<expression> <BINOP2> <expression>	
+		\\<expression> <BINOP3> <expression>
+		\\<expression> <BINOP4> <expression>
+		\\<expression> <BINOP5> <expression>	
+		\\<expression> <BINOP6> <expression>
+		\\<expression> <BINOP7> <expression>
+		\\<expression> {\tt and} <expression>
+		\\<expression> {\tt or} <expression>
+		\\<smallexpression>
+		\\ <name> {\tt =} {expression}
+		\\ {\tt return} <expression>
+	\end{stack}
+\end{malrit}
+
+%% smallexpression
+\begin{malrit}{smallexpression}
+	\begin{stack}
+		<op> <smallexpression>
+		\\{\tt if} <expression> <body> <ifrest>
+		\\<literal>
+		\\<name>
+		\\<name> ' ( ' <arguments> ' ) '
+		\\' ( ' <expression> ' ) '
+	\end{stack}
+\end{malrit}
+
+%% body
+\begin{malrit}{body}
+	'\{' <expressions> '\}'
+\end{malrit}
+
+%% ifrest
+\begin{malrit}{ifrest}
+	\begin{stack}
+		{\tt elif} <expression> <body> <ifrest>
+		\\{\tt else} <body>
+	\end{stack}
+\end{malrit}
+
+%% arguments
+\begin{malrit}{arguments}
+	<non_empty_arguments>
+\end{malrit}
+
+%% non_empty_arguments
+\begin{malrit}{non_empty_arguments}
+	\begin{stack}
+		<argument> ' , ' <non_empty_arguments>
+		\\<argument>
+	\end{stack}
+\end{malrit}
+
+%% argument
+\begin{malrit}{argument}
+	<expression>
+\end{malrit}
+
+\pagebreak
+
+\section{Merking málsins}
+\subsection{Einingar og einingaraðgerðir}
+Hver ohprom kóðaskrá samsvarar einni einingu í Morpho. Engin útfærsla er á tengingu við aðrar einingar aðrar en BASIS í Morpho, sem er sjálfgefin.
+ohprom skrár eru þó þýddar yfir í Morpho og hægt er að nota þær einingar sem úr ohprom koma í Morpho, þó notagildið sé vissulega takmarkað þar sem allar
+einingarnar eru tengdar við BASIS.
+
+ohprom kóðaskrá sem inniheldur {\tt main} fall er þýdd yfir í keyrsluhæfa Morpho skrá ({\tt .mexe}).
+
+\subsection{Gildi}
+Öll gildi í ohprom (heiltölur, fleytitölur, strengir, stafsegðir, {\tt true}, {\tt false} og {\tt null} varpast yfir í samsvarandi gildi í Morpho.
+
+\subsubsection{Sanngildi}
+Segðir sem lesa sanngildi úr reiknisegð lesa {\tt false}, {\tt null} og tölugildið 0 sem ósatt, allt annað er satt.
+
+\subsection{Breytur}
+Ekki þarf að skilgreina breytur sérstaklega áður en þeim er gefið gildi. Engin tögun er heldur í ohprom, svo sama breyta getur innihaldið gildi af
+mismunandi tagi á mismunandi tíma.
+
+\subsection{Merking segða}
+Heiltölur, fleytitölur, strengir, stafsegðir, {\tt true}, {\tt false} og {\tt null} virka eins og í Morpho.
+
+\subsubsection{Reiknisegðir}
+Reiknisegðir eru þær segðir sem skila gildi í ohprom. Þær innihalda breytur, gildi, röksegðir, kallsegðir og tvíundarsegðir. Þegar allir liðir reiknisegðar
+hafa verið framkvæmdir fæst gildi hennar. Það gildi má nota við gildisveitingu breyta, sem viðfang í kallsegð
+eða sem viðfang í {\tt fi} segðir.
+
+\subsubsection{Listasegð}
+Listasegðir voru ekki hugsaðar sem partur af ohprom heldur átti að nýta möguleika Morpho.
+
+\subsubsection{nruter-segð}
+Hægt er að nota lykilorðið {\tt nruter} til að ljúka keyrslu falls áður en stofni þess er lokið. Bæði getur það staðið eitt og sér, en einnig getur
+reiknisegð fylgt því í sömu línu, og þá lýkur keyrslu fallsins með þeirri segð.
+
+\subsubsection{Röksegðir}
+Röksegðir í ohprom skila annað hvort {\tt true} eða {\tt false} gildum. Tvíundaraðgerðirnar {\tt dna} og {\tt ro} eru útfærðar þar sem {\tt dna} hefur hærri forgang,
+og eru þær báðar vinstri tengdar. Prefix einundaraðgerðin {\tt ton} er einnig útfærð, og hefur hún hæstan forgang.
+
+Ef vinstri hlið {\tt ro} segðar hefur sanngildið {\tt true} er hægri hlið hennar ekki keyrð. Á sama hátt er hægri hlið {\tt dna} segðar ekki keyrð ef sanngildi
+vinstri segðar hennar er {\tt false}.
+
+\subsubsection{Tvíundaraðgerðir}
+Tvíundaraðgerðir í ohprom eru eins og tvíundaraðgerðir í Morpho. Munurinn liggur helst í röksegðunum {\tt dna} og {\tt ro}, sem eru jafngildar {\tt \&\&} og {\tt ||}.
+
+Tenging og forgangur er eins og í Morpho.
+
+\subsubsection{Einundaraðgerðir}
+Aðeins ein einundarsegð er útfærð í ohprom: {\tt ton}. Henni er lýst í hlutanum um röksegðir hér að ofan.
+
+\subsubsection{fi-, file-, esle- segðir}
+Í ohprom má nota fi-segðir til að stýra keyrslu forrits. Þær hefjast á forminu {\tt fi (x)} þar sem {\tt x} er reiknisegð. Ef gildi hennar hefur sanngildið {\tt true} er stofn
+segðarinnar keyrður.
+
+Ef sanngildið er {\tt false} er stofninum sleppt, en möguleiki er á esle- eða file- hluta þar á eftir. Hann getur einnig haft reiknisegð, og er þá á forminu {\tt file (x)} þar sem {\tt x} er reiknigsegð eða einfaldlega {\tt esle} sem er keyrt ef ekki er uppfyllt skilyrði {\tt fi} og {\tt file} segðanna.
+
+\end{document}
